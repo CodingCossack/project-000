@@ -1,0 +1,62 @@
+# orchestration/models.yaml
+# Minimal model config and selection rules.
+
+session_limits:
+  max_context_tokens: 80000
+  default_max_output_tokens: 2048
+
+# 1) Model tiers: group concrete models by cost/strength.
+model_tiers:
+  cheap:
+    models:
+      - gpt-5.1-mini
+      - haiku-4.5
+      - gemini-3-flash
+
+  strong:
+    models:
+      - gpt-5.1
+      - sonnet-4.5
+      - gemini-3-pro-preview
+
+  code:
+    models:
+      - gpt-5.1-codex
+      - gpt-5.1-codex-mini
+
+# 2) Roles: which tiers each role may use.
+roles:
+  planner:
+    allowed_tiers: [strong]
+
+  executor:
+    allowed_tiers: [cheap, strong, code]
+
+  logger:
+    allowed_tiers: [cheap]
+
+# 3) Role defaults (used if nothing else says otherwise).
+defaults:
+  reasoning_effort:
+    planner: high
+    executor: medium
+    logger: low
+
+  max_output_tokens:
+    planner: 4096
+    executor: 3072
+    logger: 2048
+
+# 4) Simple mapping from task metadata to tier + reasoning.
+selection:
+  # From TASKS.md.difficulty
+  difficulty_to_tier:
+    easy: cheap
+    medium: strong
+    hard: strong
+
+  # From TASKS.md.effort
+  effort_to_reasoning:
+    low: low
+    medium: medium
+    high: high
