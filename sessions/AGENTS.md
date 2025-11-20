@@ -1,133 +1,126 @@
-```md
+### `sessions/AGENTS.md`
+
+````md
 # sessions/AGENTS.md
 
-Contract for using `sessions/`.
+Purpose: sessions/ exists so LLMs can resume a task without replaying old chats.
+Keep logs tiny and structured.
 
 Contents:
-- `INDEX.md` – flat index of all sessions.
+- `INDEX.md` – flat table of sessions.
 - `T-XXXX/*.md` – per-task session reports.
-
-Keep this short. All detail lives in the reports, not here.
 
 ---
 
-## 1. INDEX.md
+## 1. INDEX.md format
 
 File: `sessions/INDEX.md`
 
-```
+```md
 # Session Index
 
-| session_id         | task_id | status    | executor_model | logger_model | tokens_used | path                               |
-|--------------------|---------|-----------|---------------|--------------|-------------|------------------------------------|
-```
+| session_id              | task_id(s)              | status    | executor_model | logger_model | tokens_used | path                                  |
+|-------------------------|-------------------------|-----------|----------------|--------------|-------------|---------------------------------------|
+````
 
 Columns:
-- session_id = YYYYMMDDThhmm-<executor_model>
-- task_id = T-XXXX from tasks/TASKS.md
-- status = completed | partial | failed | aborted
-- executor_model
-- logger_model
-- tokens_used = int or -
-- path = sessions/T-XXXX/<session_id>.md
+
+* `session_id` – `YYYYMMDDThhmm-<executor_model>`
+* `task_id(s)` – one or more task ids, comma-separated (e.g. `T-0001,T-0002`)
+* `status` – `completed` | `partial` | `failed` | `aborted`
+* `executor_model`
+* `logger_model`
+* `tokens_used` – int or `-`
+* `path` – `sessions/T-XXXX/<session_id>.md` (pick a primary T-XXXX)
 
 Rules:
-- Only logger models append/modify rows.
-- One row per session file. Keep header intact.
+
+* Only **logger** models edit this file.
+* One row per session report.
 
 ---
 
-## 2. Session reports
+## 2. Session report format
 
-Path: sessions/T-XXXX/<session_id>.md
+Path: `sessions/T-XXXX/<session_id>.md`
 
-Naming:
-- T-XXXX = task id (e.g. T-0001)
-- session_id = YYYYMMDDThhmm-<executor_model> (e.g. 20251118T1900-gpt-5.1)
+* `T-XXXX` = primary task id.
+* `session_id` = matches INDEX.
 
-### 2.1 Frontmatter
+### Frontmatter (required)
 
-Top of file:
-```
-***
-task_id: T-0001
-task_title: Short title from TASKS.md
-status: partial        # completed | partial | failed | aborted
+```md
+---
+task_ids: [T-0001]          # or [T-0001, T-0002]
+status: partial             # completed | partial | failed | aborted
 executor_model: gpt-5.1
 logger_model: gpt-5.1-mini
-tokens_used: 78000     # or "-"
-summary: <= 250 chars, one line, no markdown.
-***
+summary: "One-line summary, <= 200 chars."
+---
 ```
 
-Mandatory keys:
-- task_id
-- task_title
-- status
-- executor_model
-- logger_model
-- tokens_used
-- summary (hard cap 250 chars)
+Only these keys are required:
 
-### 2.2 Body
+* `task_ids`
+* `status`
+* `executor_model`
+* `logger_model`
+* `summary`
 
-Structure:
+You MAY add `tokens_used`, `branch`, `commits`, etc. if useful.
 
-```
-## Scope
+### Body (LLM-optimised)
 
-- ...
+```md
+## actions
+- What changed (files/areas), 1–5 bullets.
 
-## Actions
+## decisions
+- Non-obvious choices, 0–5 bullets.
 
-- ...
-
-## Decisions
-
-- ...
-
-## Notes
-
-- ...
-
-## Next steps
-
-- ...
+## next
+- How to resume, 1–5 bullets.
 ```
 
-Rules:
-- Max ~300 lines total (frontmatter + body).
-- For completed + small: keep 1–3 bullets per section.
-- For partial/failed: spell out what was tried, what broke, what to do next.
-- No code dumps. Link to files/dirs instead of pasting big blobs.
+Constraints:
+
+* Hard cap: **≤ 40 lines total** (frontmatter + body).
+* No code dumps; refer to files/commits instead.
+* If `status != completed`, `next` must say exactly what’s needed to continue.
 
 ---
 
-## 3. Roles
+## 3. Roles and lifecycle
 
-Executor models (expensive):
-- Defined in orchestration/models.yaml → roles.executor.
-- Do work. Do not write sessions/*.md or edit INDEX.md.
-- At session end, produce a short raw log (bullets) for logger.
+**Executor (expensive models; do work)**
 
-Logger models (cheap):
-- Defined in orchestration/models.yaml → roles.logger.
-- Write session report file + update INDEX.md.
-- May bump difficulty/effort/status/model in tasks/TASKS.md when appropriate.
-- Do not make large code changes; summarise only.
+* Defined in `orchestration/models.yaml → roles.executor`.
 
----
+* Reads `tasks/TASKS.md` row and latest session(s) for the task.
 
-## 4. Session lifecycle (minimal)
+* Does the work.
 
-Executor:
-- Reads TASKS.md row + latest session(s) for task_id.
-- Works within token cap (see orchestration/models.yaml.session_limits).
-- Emits raw log near end.
+* Near the end, emits a `[RAW LOG]` in the chat, e.g.:
 
-Logger:
-- Creates sessions/T-XXXX/<session_id>.md with schema above.
-- Appends row to INDEX.md.
-- Adjusts TASKS.md if status/difficulty/effort/model changed.
-- Done.
-```
+  ```md
+  [RAW LOG]
+  tasks: T-0009,T-0010
+  actions:
+    - Directory.tsx: add container id, fix multiselect, badge classes.
+    - globals.css: add padding on filter container.
+  decisions:
+    - Keep Unicorn ID-scoped CSS; match React to it.
+  next:
+    - Fix push 403 and push commit 441eb14.
+    - Run mobile visual pass on filters/cards.
+  ```
+
+* Executors do **not** edit `sessions/*.md` or `INDEX.md`.
+
+**Logger (cheap models; write logs)**
+
+* Defined in `orchestration/models.yaml → roles.logger`.
+* Takes the `[RAW LOG]` + minimal context.
+* Creates `sessions/T-XXXX/<session_id>.md` matching §2.
+* Appends a row to `sessions/INDEX.md`.
+* Updates `tasks/TASKS.md` if status/difficulty/effort/model changed.
