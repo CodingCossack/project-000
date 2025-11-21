@@ -19,19 +19,19 @@ All agents (Claude, GPT, Gemini, Codex, etc.) must respect this schema and lifec
 
 `TASKS.md` is a Markdown table with these columns, in this exact order:
 
-| Column     | Type    | Allowed values / format                                                                 |
-|------------|---------|------------------------------------------------------------------------------------------|
-| `id`       | string  | `T-0001`, `T-0002`, … zero-padded, stable per task                                      |
-| `title`    | string  | Short human-readable summary (≤ 80 chars)                                              |
-| `status`   | enum    | `todo`, `in-progress`, `blocked`, `done`, `dropped`                                     |
-| `difficulty` | enum  | `easy`, `medium`, `hard`                                                                |
-| `effort`   | enum    | `low`, `medium`, `high` (maps to model_reasoning_effort and output budget)             |
-| `priority` | enum    | `P0`, `P1`, `P2`, `P3` (P0 = urgent, P3 = nice-to-have)                                |
-| `area`     | string  | Logical surface, e.g. `frontend`, `backend`, `pSEO`, `infra`, `tooling`, `docs`        |
-| `model`    | string  | Name of the **current executor** model, or empty if unassigned                         |
-| `issue`    | string  | GitHub issue reference like `#12` or `-` if none                                       |
-| `skills`   | string  | Comma-separated skill names from `/skills` (or `-` if none)                            |
-| `notes`    | string  | 1–2 very short notes (≤ 120 chars)                                                     |
+| Column       | Type    | Allowed values / format                                                                 |
+|--------------|---------|------------------------------------------------------------------------------------------|
+| `id`         | string  | `T-0001`, `T-0002`, … zero-padded, stable per task                                      |
+| `title`      | string  | Short human-readable summary (≤ 80 chars)                                              |
+| `status`     | enum    | `todo`, `in-progress`, `in-review`, `blocked`, `done`, `dropped`                        |
+| `difficulty` | enum    | `easy`, `medium`, `hard`                                                                |
+| `effort`     | enum    | `low`, `medium`, `high` (maps to model_reasoning_effort and output budget)             |
+| `priority`   | enum    | `P0`, `P1`, `P2`, `P3` (P0 = urgent, P3 = nice-to-have)                                |
+| `area`       | string  | Logical surface, e.g. `frontend`, `backend`, `pSEO`, `infra`, `tooling`, `docs`        |
+| `model`      | string  | Name of the **current executor** model while active, empty when unassigned or reviewed |
+| `issue`      | string  | GitHub issue reference like `#12` or `-` if none                                       |
+| `skills`     | string  | Comma-separated skill names from `/skills` (or `-` if none)                            |
+| `notes`      | string  | 1–2 very short notes (≤ 120 chars)                                                     |
 
 Example header (no data rows shown here):
 
@@ -52,39 +52,57 @@ Allowed transitions:
 
 * `todo → in-progress`
 * `todo → dropped`
+* `in-progress → in-review`
 * `in-progress → blocked`
-* `in-progress → done`
 * `in-progress → dropped`
+* `in-review → done`
+* `in-review → blocked`
 * `blocked → in-progress`
 * `blocked → dropped`
 
-Rules:
+### Semantics
 
-1. **Claiming a task**
+- `todo` – defined but untouched.
+- `in-progress` – branch / edits in flight; executor is actively changing code.
+- `in-review` – implementation done and diff/PR exists, waiting for review + merge.
+- `blocked` – cannot proceed (dependency, design decision, infra issue).
+- `done` – merged into `main` and accepted.
+- `dropped` – intentionally abandoned; kept for history.
 
-   * Only claim tasks where:
+### 1. Claiming a task
 
-     * `status = todo`
-     * `model` is empty
-   * On claim:
+Only claim tasks where:
 
-     * Set `status = in-progress`
-     * Set `model = <executor_model_name>`
-     * Optionally set `issue` if a GitHub issue is created.
+- `status = todo`
+- `model` is empty
 
-2. **Finishing a task**
+On claim:
 
-   * When a task is considered done:
+- Set `status = in-progress`
+- Set `model = <executor_model_name>`
+- Optionally set `issue` if a GitHub issue is created.
 
-     * Set `status = done`
-     * Clear `model` (executor is no longer holding it).
-   * For `done` tasks, keep `difficulty`, `effort`, `priority`, `area`, `issue`, `skills`, `notes` as historical data.
+### 2. Moving to review
 
-3. **Blocked / dropped**
+When an executor has completed the implementation and opened a PR or produced a diff for review:
 
-   * Use `blocked` when external or unresolved dependency prevents progress.
-   * Use `dropped` only when the task is intentionally abandoned.
-   * When blocked for technical reasons, update `notes` with a short cause and point to a session record or GitHub issue.
+- Set `status = in-review`
+- Keep `model = <executor_model_name>` until the PR is merged or explicitly handed off.
+- Ensure `notes` includes a reference to the branch/PR or session id.
+
+### 3. Finishing a task
+
+When the changes are merged into `main` and accepted:
+
+- Set `status = done`
+- Clear `model` (executor is no longer holding it).
+- Optionally update `notes` with merge info (PR number, date).
+
+### 4. Blocked / dropped
+
+- Use `blocked` when an external or unresolved dependency prevents progress.
+  - Update `notes` with a short cause and pointer to session/issue.
+- Use `dropped` only when the task is intentionally abandoned.
 
 ---
 
@@ -111,17 +129,22 @@ Rules:
 
 ## 4. Model assignment and conflicts
 
-* Each task can have **at most one active executor model** (`model` column) while `status = in-progress`.
-* Before touching a task, an agent must:
+- Each task can have **at most one active executor model** in `model` while `status ∈ {in-progress, in-review}`.
+- Before touching a task, an agent must:
+  - Re-read `TASKS.md`.
+  - Only pick tasks where `status = todo` and `model` is empty.
 
-  * Re-read `TASKS.md`.
-  * Only pick tasks where `status = todo` and `model` is empty.
-* For concurrency:
+Concurrency / conflicts:
 
-  * Avoid multiple `in-progress` tasks in the **same `area`** unless explicitly coordinated (e.g. via GitHub issues / human direction).
-* When handing off:
+- Avoid multiple `in-progress` tasks in the **same `area`** unless explicitly coordinated (via GitHub issue or human).
+- Prefer to complete and merge one task in an `area` before starting another, especially for `backend-data`, `search-routing`, `seo-metadata`, `infra-*`.
 
-  * Executor sets `status` to `blocked` or leaves it `in-progress` but clears or changes the `model` to signal the next executor.
+Hand-off rules:
+
+- If an executor cannot finish:
+  - Set `status = blocked` (or leave as `in-progress`), update `notes` with why, and clear or change `model`.
+- After review/merge:
+  - Move `status = done` and clear `model`.
 
 ---
 
