@@ -1,26 +1,37 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Bisection script to find which test creates unwanted files/state
-# Usage: ./find-polluter.sh <file_or_dir_to_check> <test_pattern>
-# Example: ./find-polluter.sh '.git' 'src/**/*.test.ts'
+# 
+# Requirements: bash, find, npm with `npm test <file>` support
+#
+# Usage: ./find-polluter.sh <file_or_dir_to_check> <test_directory>
+# Example: ./find-polluter.sh '.git' './src'
 
 set -e
 
 if [ $# -ne 2 ]; then
-  echo "Usage: $0 <file_to_check> <test_pattern>"
-  echo "Example: $0 '.git' 'src/**/*.test.ts'"
+  echo "Usage: $0 <file_to_check> <test_directory>"
+  echo "Example: $0 '.git' './src'"
   exit 1
 fi
 
 POLLUTION_CHECK="$1"
-TEST_PATTERN="$2"
+TEST_DIR="$2"
 
 echo "🔍 Searching for test that creates: $POLLUTION_CHECK"
-echo "Test pattern: $TEST_PATTERN"
+echo "Test directory: $TEST_DIR"
 echo ""
 
 # Get list of test files
-TEST_FILES=$(find . -path "$TEST_PATTERN" | sort)
-TOTAL=$(echo "$TEST_FILES" | wc -l | tr -d ' ')
+TEST_FILES=$(find "$TEST_DIR" -name '*.test.ts' -o -name '*.test.js' -o -name '*.spec.ts' -o -name '*.spec.js' | sort)
+
+# Check if any test files found
+if [ -z "$TEST_FILES" ]; then
+  echo "❌ No test files found in: $TEST_DIR"
+  echo "   Looking for: *.test.ts, *.test.js, *.spec.ts, *.spec.js"
+  exit 1
+fi
+
+TOTAL=$(echo "$TEST_FILES" | grep -c . || echo 0)
 
 echo "Found $TOTAL test files"
 echo ""

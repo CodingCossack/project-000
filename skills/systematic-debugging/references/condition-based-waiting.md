@@ -1,9 +1,13 @@
----
-name: condition-based-waiting
-description: Use when tests have race conditions, timing dependencies, or inconsistent pass/fail behavior - replaces arbitrary timeouts with condition polling to wait for actual state changes, eliminating flaky tests from timing guesses
----
-
 # Condition-Based Waiting
+
+## Contents
+- [Overview](#overview)
+- [When to Use](#when-to-use)
+- [Core Pattern](#core-pattern)
+- [Quick Patterns](#quick-patterns)
+- [Implementation](#implementation)
+- [Common Mistakes](#common-mistakes)
+- [When Arbitrary Timeout IS Correct](#when-arbitrary-timeout-is-correct)
 
 ## Overview
 
@@ -79,12 +83,13 @@ async function waitFor<T>(
       throw new Error(`Timeout waiting for ${description} after ${timeoutMs}ms`);
     }
 
-    await new Promise(r => setTimeout(r, 10)); // Poll every 10ms
+    // 10ms: balances responsiveness vs CPU; matches typical JS event loop granularity
+    await new Promise(r => setTimeout(r, 10));
   }
 }
 ```
 
-See @example.ts for complete implementation with domain-specific helpers (`waitForEvent`, `waitForEventCount`, `waitForEventMatch`) from actual debugging session.
+See `scripts/condition-based-waiting-example.ts` for complete implementation with domain-specific helpers (`waitForEvent`, `waitForEventCount`, `waitForEventMatch`).
 
 ## Common Mistakes
 
@@ -110,11 +115,3 @@ await new Promise(r => setTimeout(r, 200));   // Then: wait for timed behavior
 1. First wait for triggering condition
 2. Based on known timing (not guessing)
 3. Comment explaining WHY
-
-## Real-World Impact
-
-From debugging session (2025-10-03):
-- Fixed 15 flaky tests across 3 files
-- Pass rate: 60% → 100%
-- Execution time: 40% faster
-- No more race conditions

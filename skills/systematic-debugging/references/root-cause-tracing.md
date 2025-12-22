@@ -1,9 +1,14 @@
----
-name: root-cause-tracing
-description: Use when errors occur deep in execution and you need to trace back to find the original trigger - systematically traces bugs backward through call stack, adding instrumentation when needed, to identify source of invalid data or incorrect behavior
----
-
 # Root Cause Tracing
+
+## Contents
+- [Overview](#overview)
+- [When to Use](#when-to-use)
+- [The Tracing Process](#the-tracing-process)
+- [Adding Stack Traces](#adding-stack-traces)
+- [Finding Which Test Causes Pollution](#finding-which-test-causes-pollution)
+- [Real Example: Empty projectDir](#real-example-empty-projectdir)
+- [Key Principle](#key-principle)
+- [Stack Trace Tips](#stack-trace-tips)
 
 ## Overview
 
@@ -103,10 +108,10 @@ npm test 2>&1 | grep 'DEBUG git init'
 
 If something appears during tests but you don't know which test:
 
-Use the bisection script: @find-polluter.sh
+Use the bisection script `scripts/find-polluter.sh` (run from skill root):
 
 ```bash
-./find-polluter.sh '.git' 'src/**/*.test.ts'
+scripts/find-polluter.sh '.git' './src'
 ```
 
 Runs tests one-by-one, stops at first polluter. See script for usage.
@@ -164,11 +169,3 @@ digraph principle {
 **Before operation:** Log before the dangerous operation, not after it fails
 **Include context:** Directory, cwd, environment variables, timestamps
 **Capture stack:** `new Error().stack` shows complete call chain
-
-## Real-World Impact
-
-From debugging session (2025-10-03):
-- Found root cause through 5-level trace
-- Fixed at source (getter validation)
-- Added 4 layers of defense
-- 1847 tests passed, zero pollution

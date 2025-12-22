@@ -1,39 +1,52 @@
 ---
 name: writing-plans
-description: Use when design is complete and you need detailed implementation tasks for engineers with zero codebase context - creates comprehensive implementation plans with exact file paths, complete code examples, and verification steps assuming engineer has minimal domain knowledge
+description: Structured implementation planning for multi-step development tasks. Use when you have a spec or requirements and need to break work into executable steps.
 ---
 
 # Writing Plans
 
 ## Overview
 
-Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+Create implementation plans for an engineer with zero codebase context.
 
-Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
+Each plan includes:
+- Exact file paths for every operation
+- Complete code (not "add validation here")
+- Test-first approach with verification commands
+- Bite-sized steps (2-5 min each)
 
-**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
+Principles: DRY, YAGNI, TDD, frequent commits.
 
-**Context:** This should be run in a dedicated worktree (created by brainstorming skill).
+**Announce at start:** "I'm using the `writing-plans` skill to create the implementation plan."
+
+**Context:** Run in dedicated worktree. If none exists, use `using-git-worktrees` skill first.
 
 **Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
 
+## Before Writing
+
+1. Read spec/requirements completely
+2. Explore project structure (`view .`)
+3. Identify tech stack (package.json, pyproject.toml, etc.)
+4. Note existing patterns in similar files
+5. Check docs/ for existing conventions
+
 ## Bite-Sized Task Granularity
 
-**Each step is one action (2-5 minutes):**
-- "Write the failing test" - step
-- "Run it to make sure it fails" - step
-- "Implement the minimal code to make the test pass" - step
-- "Run the tests and make sure they pass" - step
-- "Commit" - step
+Each step is one action (2-5 minutes), independently verifiable:
+
+- "Write the failing test" — step
+- "Run it to confirm failure" — step
+- "Implement minimal code to pass" — step
+- "Run tests to confirm pass" — step
+- "Commit" — step
 
 ## Plan Document Header
 
-**Every plan MUST start with this header:**
+Every plan MUST start with this header:
 
-```markdown
+~~~markdown
 # [Feature Name] Implementation Plan
-
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** [One sentence describing what this builds]
 
@@ -42,11 +55,11 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 **Tech Stack:** [Key technologies/libraries]
 
 ---
-```
+~~~
 
 ## Task Structure
 
-```markdown
+~~~markdown
 ### Task N: [Component Name]
 
 **Files:**
@@ -85,32 +98,36 @@ Expected: PASS
 git add tests/path/test.py src/path/file.py
 git commit -m "feat: add specific feature"
 ```
-```
+~~~
 
-## Remember
-- Exact file paths always
-- Complete code in plan (not "add validation")
-- Exact commands with expected output
-- Reference relevant skills with @ syntax
-- DRY, YAGNI, TDD, frequent commits
+## Before Handoff
+
+Verify plan completeness:
+
+- Every file path exists or will be created
+- Every command can be run exactly as written
+- No TODO/placeholder text remains
+- Tests cover all acceptance criteria from spec
+- Include exact test code, not descriptions
 
 ## Execution Handoff
 
-After saving the plan, offer execution choice:
+After saving plan, present:
 
-**"Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:**
+**"Plan saved to `docs/plans/<filename>.md`. Choose execution mode:**
 
-**1. Subagent-Driven (this session)** - I dispatch fresh subagent per task, review between tasks, fast iteration
-
-**2. Parallel Session (separate)** - Open new session with executing-plans, batch execution with checkpoints
+1. **Subagent-Driven** — same session, fresh subagent per task, fast iteration
+2. **Parallel Session** — new session, batched execution with checkpoints
 
 **Which approach?"**
 
-**If Subagent-Driven chosen:**
-- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
-- Stay in this session
-- Fresh subagent per task + code review
+### If Subagent-Driven chosen
 
-**If Parallel Session chosen:**
-- Guide them to open new session in worktree
-- **REQUIRED SUB-SKILL:** New session uses superpowers:executing-plans
+- Stay in this session
+- **REQUIRED SUB-SKILL:** `subagent-driven-development`
+- Fresh subagent per task + two-stage review
+
+### If Parallel Session chosen
+
+- Guide user to open new session in worktree
+- **REQUIRED SUB-SKILL:** New session uses `executing-plans`

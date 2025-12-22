@@ -1,9 +1,12 @@
----
-name: defense-in-depth
-description: Use when invalid data causes failures deep in execution, requiring validation at multiple system layers - validates at every layer data passes through to make bugs structurally impossible
----
-
 # Defense-in-Depth Validation
+
+## Contents
+- [Overview](#overview)
+- [Why Multiple Layers](#why-multiple-layers)
+- [The Four Layers](#the-four-layers)
+- [Applying the Pattern](#applying-the-pattern)
+- [Example from Session](#example-from-session)
+- [Key Insight](#key-insight)
 
 ## Overview
 
@@ -114,7 +117,7 @@ Bug: Empty `projectDir` caused `git init` in source code
 - Layer 3: `WorktreeManager` refuses git init outside tmpdir in tests
 - Layer 4: Stack trace logging before git init
 
-**Result:** All 1847 tests passed, bug impossible to reproduce
+**Result:** Bug impossible to reproduce
 
 ## Key Insight
 

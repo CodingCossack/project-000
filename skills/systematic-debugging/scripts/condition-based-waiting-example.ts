@@ -1,9 +1,22 @@
-// Complete implementation of condition-based waiting utilities
-// From: Lace test infrastructure improvements (2025-10-03)
-// Context: Fixed 15 flaky tests by replacing arbitrary timeouts
+// Generic condition-based waiting utilities
+// Adapt types to your codebase - this example uses placeholder interfaces
+//
+// Replace these with your actual types:
+// - ThreadManager: Any object with getEvents(id: string) method
+// - LaceEvent: Your event type with 'type' property
+// - LaceEventType: String union of your event types
 
-import type { ThreadManager } from '~/threads/thread-manager';
-import type { LaceEvent, LaceEventType } from '~/threads/types';
+interface ThreadManager {
+  getEvents(threadId: string): LaceEvent[];
+}
+
+interface LaceEvent {
+  type: string;
+  data?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+type LaceEventType = string;
 
 /**
  * Wait for a specific event type to appear in thread
@@ -35,7 +48,8 @@ export function waitForEvent(
       } else if (Date.now() - startTime > timeoutMs) {
         reject(new Error(`Timeout waiting for ${eventType} event after ${timeoutMs}ms`));
       } else {
-        setTimeout(check, 10); // Poll every 10ms for efficiency
+        // 10ms: balances responsiveness vs CPU; matches typical JS event loop granularity
+        setTimeout(check, 10);
       }
     };
 
@@ -80,6 +94,7 @@ export function waitForEventCount(
           )
         );
       } else {
+        // 10ms: balances responsiveness vs CPU; matches typical JS event loop granularity
         setTimeout(check, 10);
       }
     };
@@ -127,6 +142,7 @@ export function waitForEventMatch(
       } else if (Date.now() - startTime > timeoutMs) {
         reject(new Error(`Timeout waiting for ${description} after ${timeoutMs}ms`));
       } else {
+        // 10ms: balances responsiveness vs CPU; matches typical JS event loop granularity
         setTimeout(check, 10);
       }
     };
@@ -135,7 +151,7 @@ export function waitForEventMatch(
   });
 }
 
-// Usage example from actual debugging session:
+// Usage example:
 //
 // BEFORE (flaky):
 // ---------------
@@ -154,5 +170,3 @@ export function waitForEventMatch(
 // await messagePromise;
 // await waitForEventCount(threadManager, threadId, 'TOOL_RESULT', 2); // Wait for results
 // expect(toolResults.length).toBe(2); // Always succeeds
-//
-// Result: 60% pass rate → 100%, 40% faster execution

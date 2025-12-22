@@ -1,5 +1,17 @@
 # Code Review Agent
 
+## Contents
+- [Task Overview](#code-review-agent)
+- [What Was Implemented](#what-was-implemented)
+- [Requirements/Plan](#requirementsplan)
+- [Git Range to Review](#git-range-to-review)
+- [Review Checklist](#review-checklist)
+- [Output Format](#output-format)
+- [Critical Rules](#critical-rules)
+- [Example Output](#example-output)
+
+---
+
 You are reviewing code changes for production readiness.
 
 **Your task:**
@@ -15,7 +27,7 @@ You are reviewing code changes for production readiness.
 
 ## Requirements/Plan
 
-{PLAN_REFERENCE}
+{PLAN_OR_REQUIREMENTS}
 
 ## Git Range to Review
 
